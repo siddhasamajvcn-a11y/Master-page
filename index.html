@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Personal Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #bb86fc;
+            --success-color: #03dac6;
+            --text-color: #e0e0e0;
+            --danger-color: #cf6679;
+            --wa-color: #25D366;
+            --call-color: #4CAF50;
+            --border-radius: 12px;
+            --panel-bg: rgba(25, 25, 25, 0.75);
+            --panel-blur: blur(12px);
+            --cube-x: -25deg; --cube-z: 0deg; --cube-speed: 8s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; padding: 20px; padding-bottom: 80px; color: var(--text-color);
+            background-color: #121212; background-image: url('background.png');
+            background-size: cover; background-position: center; background-attachment: fixed;
+            transition: background-image 0.5s ease; -webkit-user-select: none; user-select: none;
+        }
+
+        .panel {
+            background-color: var(--panel-bg); backdrop-filter: var(--panel-blur); -webkit-backdrop-filter: var(--panel-blur);
+            padding: 15px; border-radius: var(--border-radius); margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Header & Cube */
+        .header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .profile-img { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .header-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+        .clock-container { text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+        .time { font-size: 2rem; font-weight: bold; color: var(--primary-color); letter-spacing: 1px; }
+        .time-sec { font-size: 1rem; color: #aaa; margin-left: 2px; }
+        .ampm { font-size: 1rem; color: #fff; margin-left: 5px; font-weight: normal; }
+        .date { font-size: 0.85rem; color: #ccc; margin-top: -5px; }
+        
+        .cube-settings-btn { margin-top: 8px; font-size: 0.85rem; color: #aaa; background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 20px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .scene-container { position: relative; width: 140px; margin: 30px auto; }
+        .scene { width: 120px; height: 120px; perspective: 600px; margin: 0 auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; animation: rotateCube var(--cube-speed) infinite linear; }
+        .cube.paused { animation-play-state: paused; }
+        .cube__face { position: absolute; width: 120px; height: 120px; background-image: url('cube.png'); background-size: cover; background-position: center; border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
+        .cube__face--front  { transform: rotateY(  0deg) translateZ(60px); } .cube__face--right  { transform: rotateY( 90deg) translateZ(60px); } .cube__face--back   { transform: rotateY(180deg) translateZ(60px); } .cube__face--left   { transform: rotateY(-90deg) translateZ(60px); } .cube__face--top    { transform: rotateX( 90deg) translateZ(60px); } .cube__face--bottom { transform: rotateX(-90deg) translateZ(60px); }
+        @keyframes rotateCube { from { transform: translateZ(-60px) rotateX(var(--cube-x)) rotateZ(var(--cube-z)) rotateY(0deg); } to { transform: translateZ(-60px) rotateX(var(--cube-x)) rotateZ(var(--cube-z)) rotateY(360deg); } }
+
+        /* UI Elements */
+        h2 { font-size: 1.2rem; margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; display: flex; justify-content: space-between; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        button { background-color: var(--primary-color); color: #000; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        button.danger { background-color: var(--danger-color); color: #fff; }
+        button.success { background-color: var(--success-color); color: #000; }
+        button.small { padding: 4px 8px; font-size: 0.8rem; }
+        input, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; background-color: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; box-sizing: border-box; }
+        input[type="range"] { padding: 0; } input[type="checkbox"] { width: auto; transform: scale(1.3); margin-right: 5px; accent-color: var(--primary-color); }
+        .weekday-selector { display: flex; justify-content: space-between; margin-bottom: 15px; } .day-label { display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; color: #ccc; } .day-label input { margin: 5px 0 0 0; }
+
+        /* Ledger Table */
+        .table-container { overflow-x: auto; margin-top: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; white-space: nowrap; }
+        th { background: rgba(0,0,0,0.6); padding: 10px; cursor: pointer; color: var(--primary-color); border-bottom: 2px solid rgba(255,255,255,0.2); }
+        td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative; }
+        tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+        .amount-col { font-family: monospace; font-weight: bold; text-align: right; }
+
+        /* Long Press Action Logic */
+        .list-item, .q-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.3s ease; border-radius: 6px; }
+        .list-item a, .list-item span, td span { color: var(--text-color); text-decoration: none; font-size: 1.1rem; flex-grow: 1; pointer-events: none; }
+        
+        .action-btns { display: none; gap: 5px; animation: popIn 0.2s ease forwards; justify-content: flex-end; }
+        .show-actions { background: rgba(187, 134, 252, 0.15) !important; border-left: 3px solid var(--primary-color); }
+        .show-actions .action-btns { display: flex; } 
+        .show-actions a, .show-actions span, .show-actions td>span { pointer-events: none; opacity: 0.5; }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .action-icon-btn { display: flex; justify-content: center; align-items: center; width: 35px; height: 35px; border-radius: 50%; text-decoration: none; font-size: 1.1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.4); pointer-events: auto !important; }
+        .btn-call { background-color: var(--call-color); } .btn-wa { background-color: var(--wa-color); }
+
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: var(--panel-bg); backdrop-filter: var(--panel-blur); padding: 20px; border-radius: var(--border-radius); width: 90%; max-width: 400px; border: 1px solid rgba(255,255,255,0.2); max-height: 90vh; overflow-y: auto; }
+        #ringing-label { color: var(--primary-color); font-size: 2.5rem; text-align: center; animation: blink 1s infinite; margin-top: 0; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Permission Banner */
+        #permission-banner { display: none; background: var(--danger-color); color: white; padding: 10px; text-align: center; border-radius: var(--border-radius); margin-bottom: 20px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <input type="file" id="bg-upload" accept="image/*" style="display: none;">
+
+    <div id="permission-banner" onclick="requestSystemPermissions()">
+        ⚠️ Tap here to allow Alarms to ring in the background!
+    </div>
+
+    <div class="panel header">
+        <img src="profile.jpg" alt="Profile" class="profile-img" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'55\' height=\'55\'><rect width=\'55\' height=\'55\' fill=\'%23555\'/></svg>'">
+        <div class="header-right">
+            <div class="clock-container">
+                <div class="time" id="clock">12:00<span class="time-sec" id="clock-sec">:00</span><span class="ampm" id="clock-ampm">AM</span></div>
+                <div class="date" id="date">Loading...</div>
+            </div>
+            <div class="cube-settings-btn" onclick="openCubeSettings()">⚙️ Settings</div>
+        </div>
+    </div>
+
+    <div class="scene-container" id="cube-container" title="Long press to change background">
+        <div class="scene">
+            <div class="cube" id="the-cube">
+                <div class="cube__face cube__face--front"></div> <div class="cube__face cube__face--back"></div>
+                <div class="cube__face cube__face--right"></div> <div class="cube__face cube__face--left"></div>
+                <div class="cube__face cube__face--top"></div> <div class="cube__face cube__face--bottom"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Quick Lists <button onclick="toggleForm('create-list-form')">+ New</button></h2>
+        <div id="create-list-form" style="display: none; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+            <input type="text" id="new-list-name" placeholder="List Title">
+            <select id="new-list-type">
+                <option value="name">Standard List</option>
+                <option value="check">Checklist</option>
+                <option value="account">Basic Accounting</option>
+                <option value="medicine">Advanced Ledger (Spreadsheet)</option>
+            </select>
+            <button onclick="createNewList()" style="width: 100%;">Create List</button>
+        </div>
+        <div id="quick-lists-container"></div>
+    </div>
+
+    <div class="panel">
+        <h2>Alarms / Reminders <button onclick="toggleForm('alarm-form')">+ Add</button></h2>
+        <div id="alarm-form" style="display: none;">
+            <input type="time" id="alarm-time">
+            <input type="text" id="alarm-label" placeholder="Reminder Name">
+            <label style="font-size: 0.85rem; color: #ccc;">Repeat on specific days:</label>
+            <div class="weekday-selector">
+                <label class="day-label">S<input type="checkbox" class="alarm-day" value="0"></label>
+                <label class="day-label">M<input type="checkbox" class="alarm-day" value="1"></label>
+                <label class="day-label">T<input type="checkbox" class="alarm-day" value="2"></label>
+                <label class="day-label">W<input type="checkbox" class="alarm-day" value="3"></label>
+                <label class="day-label">T<input type="checkbox" class="alarm-day" value="4"></label>
+                <label class="day-label">F<input type="checkbox" class="alarm-day" value="5"></label>
+                <label class="day-label">S<input type="checkbox" class="alarm-day" value="6"></label>
+            </div>
+            <label style="font-size: 0.85rem; color: #ccc;">Or specific date of month:</label>
+            <input type="number" id="alarm-monthday" placeholder="E.g., 15" min="1" max="31">
+            <button onclick="addStandardAlarm()" style="width: 100%;">Save Alarm</button>
+        </div>
+        <div id="alarm-list"></div>
+    </div>
+
+    <div class="panel"><h2>Quick Contacts <button onclick="toggleForm('contact-form')">+ Add</button></h2><div id="contact-form" style="display: none;"><input type="text" id="contact-name" placeholder="Contact Name"><input type="number" id="contact-phone" placeholder="Phone"><button onclick="addContact()">Save Contact</button></div><div id="contact-list"></div></div>
+    <div class="panel"><h2>Quick Apps <button onclick="toggleForm('app-form')">+ Add</button></h2><div id="app-form" style="display: none;"><input type="text" id="app-name" placeholder="App Name"><input type="text" id="app-intent" placeholder="App Intent URL"><label style="font-size: 0.85rem; color: #ccc;">App Icon (Optional):</label><input type="file" id="app-icon" accept="image/*"><button onclick="addApp()">Save App</button></div><div id="app-list"></div></div>
+    <div class="panel"><h2>Websites <button onclick="toggleForm('site-form')">+ Add</button></h2><div id="site-form" style="display: none;"><input type="text" id="site-name" placeholder="Website Name"><input type="text" id="site-url" placeholder="URL"><button onclick="addWebsite()">Save Website</button></div><div id="site-list"></div></div>
+
+    <audio id="alarm-audio" loop><source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg"></audio>
+    <div id="alarm-modal" class="modal-overlay"><div class="modal-content" style="background: rgba(0,0,0,0.95); text-align: center;"><h1 id="ringing-label">Alarm!</h1><div style="display: flex; gap: 10px; justify-content: center;"><select id="snooze-time" style="width: auto; margin: 0;"><option value="5">Snooze 5 min</option><option value="10">Snooze 10 min</option></select><button onclick="snoozeAlarm()">Snooze</button><button class="danger" onclick="stopAlarm()">Stop</button></div></div></div>
+    <div id="cube-settings-modal" class="modal-overlay"><div class="modal-content"><h2 style="margin-bottom: 20px;">Cube Settings</h2><label>X Tilt</label><input type="range" id="setting-x" min="-90" max="90" value="-25" oninput="updateCubePreview()"><label>Z Roll</label><input type="range" id="setting-z" min="-90" max="90" value="0" oninput="updateCubePreview()"><label>Speed</label><input type="range" id="setting-speed" min="0" max="20" value="8" step="0.5" oninput="updateCubePreview()"><div style="display: flex; justify-content: space-between; margin-top: 15px;"><button class="danger" onclick="closeCubeSettings()">Close</button><button class="success" onclick="saveCubeSettings()">Save</button></div></div></div>
+
+    <div id="edit-ledger-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 15px;">Edit Ledger Entry</h2>
+            <div id="edit-ledger-inputs"></div>
+            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                <button class="danger" onclick="document.getElementById('edit-ledger-modal').style.display='none'">Cancel</button>
+                <button class="success" onclick="saveLedgerEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. BACKGROUND PERMISSIONS & SERVICE WORKER ---
+        async function requestSystemPermissions() {
+            if ('Notification' in window) {
+                const perm = await Notification.requestPermission();
+                if (perm === 'granted') document.getElementById('permission-banner').style.display = 'none';
+            }
+            if ('wakeLock' in navigator) {
+                try { window.wakeLockObj = await navigator.wakeLock.request('screen'); } catch (err) { }
+            }
+        }
+        
+        // Inline Service Worker for background notifications
+        if ('serviceWorker' in navigator) {
+            const swCode = `self.addEventListener('notificationclick', e => { e.notification.close(); e.waitUntil(clients.openWindow('/')); });`;
+            const blob = new Blob([swCode], {type: 'application/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(err => console.log("SW Reg failed, likely due to file:// protocol."));
+        }
+
+        window.onload = () => {
+            if ('Notification' in window && Notification.permission !== 'granted') {
+                document.getElementById('permission-banner').style.display = 'block';
+            }
+        };
+
+        // --- 2. GLOBAL LONG PRESS LOGIC (Now reveals Actions instead of just Delete) ---
+        let listPressTimer;
+        function startPress(e) {
+            const itemRow = e.target.closest('.list-item, .q-item, tr[data-id]');
+            if (!itemRow || e.target.closest('button, .action-icon-btn, input, th')) return; 
+            listPressTimer = setTimeout(() => {
+                document.querySelectorAll('.show-actions').forEach(el => el.classList.remove('show-actions'));
+                itemRow.classList.add('show-actions');
+                if('vibrate' in navigator) navigator.vibrate(50);
+            }, 600);
+        }
+        function cancelPress() { clearTimeout(listPressTimer); }
+        document.addEventListener('click', (e) => { if (!e.target.closest('.show-actions')) document.querySelectorAll('.show-actions').forEach(el => el.classList.remove('show-actions')); });
+        document.body.addEventListener('touchstart', startPress, {passive: true}); document.body.addEventListener('mousedown', startPress);
+        ['touchend', 'touchmove', 'mouseup', 'mouseleave'].forEach(evt => document.body.addEventListener(evt, cancelPress));
+
+        // --- BACKGROUND, CLOCK & CUBE ---
+        const bgInput = document.getElementById('bg-upload');
+        document.getElementById('cube-container').addEventListener('mousedown', () => { setTimeout(() => bgInput.click(), 600); });
+        bgInput.addEventListener('change', e => { if (e.target.files[0]) { const r = new FileReader(); r.onload = ev => { localStorage.setItem('custom-bg', ev.target.result); document.body.style.backgroundImage = `url('${ev.target.result}')`; }; r.readAsDataURL(e.target.files[0]); } });
+        if(localStorage.getItem('custom-bg')) document.body.style.backgroundImage = `url('${localStorage.getItem('custom-bg')}')`;
+
+        function updateClock() {
+            const now = new Date(); let h = now.getHours(); const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+            document.getElementById('clock').innerHTML = `${h}:${now.getMinutes().toString().padStart(2, '0')}<span class="time-sec">:${now.getSeconds().toString().padStart(2, '0')}</span><span class="ampm">${ampm}</span>`;
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            checkAlarms(now); requestAnimationFrame(updateClock);
+        } requestAnimationFrame(updateClock);
+
+        function openCubeSettings() { document.getElementById('cube-settings-modal').style.display='flex'; }
+        function closeCubeSettings() { document.getElementById('cube-settings-modal').style.display='none'; }
+        function updateCubePreview() { document.documentElement.style.setProperty('--cube-x', document.getElementById('setting-x').value+'deg'); document.documentElement.style.setProperty('--cube-z', document.getElementById('setting-z').value+'deg'); document.documentElement.style.setProperty('--cube-speed', document.getElementById('setting-speed').value+'s'); }
+        function saveCubeSettings() { updateCubePreview(); closeCubeSettings(); }
+
+        // --- ALARMS SYSTEM ---
+        let currentRingingAlarm = null; let lastCheckedMinute = null;
+        function renderAlarms() {
+            const alarms = JSON.parse(localStorage.getItem('alarms')) || [];
+            const c = document.getElementById('alarm-list'); c.innerHTML = '';
+            const dayMap = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            alarms.forEach((a, i) => {
+                let [h, m] = a.time.split(':'); let ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+                let subtext = [];
+                if(a.days && a.days.length > 0) subtext.push(a.days.map(d => dayMap[d]).join(', '));
+                if(a.monthDay) subtext.push(`Day ${a.monthDay}`);
+                if(a.specificDate) subtext.push(a.specificDate);
+                if(subtext.length === 0) subtext.push('Once/Daily');
+                
+                c.innerHTML += `<div class="list-item"><div style="display:flex; flex-direction:column; flex-grow:1; pointer-events:none;">
+                    <span>${h}:${m} ${ampm} - <strong>${a.label}</strong></span><span style="font-size:0.75rem; color:#aaa;">${subtext.join(' | ')}</span></div>
+                    <div><button class="small" onclick="event.stopPropagation(); toggleAlarm(${i})" style="background:${a.active ? 'var(--primary-color)' : '#555'}">${a.active ? 'ON' : 'OFF'}</button></div>
+                    <div class="action-btns"><button class="danger" onclick="event.stopPropagation(); removeAlarm(${i})">Del</button></div></div>`;
+            });
+        }
+
+        function addStandardAlarm() {
+            const time = document.getElementById('alarm-time').value, label = document.getElementById('alarm-label').value || 'Alarm';
+            const mDay = document.getElementById('alarm-monthday').value;
+            const days = Array.from(document.querySelectorAll('.alarm-day:checked')).map(cb => parseInt(cb.value));
+            if (!time) return alert('Set a time');
+            createInternalAlarm(time, label, days, mDay ? parseInt(mDay) : null, null);
+            document.getElementById('alarm-time').value = ''; document.getElementById('alarm-label').value = ''; document.getElementById('alarm-monthday').value = '';
+            document.querySelectorAll('.alarm-day').forEach(cb => cb.checked = false); toggleForm('alarm-form');
+        }
+
+        function createInternalAlarm(time, label, days = [], monthDay = null, specificDate = null) {
+            const alarms = JSON.parse(localStorage.getItem('alarms')) || [];
+            alarms.push({ time, label, active: true, days, monthDay, specificDate }); localStorage.setItem('alarms', JSON.stringify(alarms)); renderAlarms();
+        }
+
+        function toggleAlarm(i) { const a = JSON.parse(localStorage.getItem('alarms')); a[i].active = !a[i].active; localStorage.setItem('alarms', JSON.stringify(a)); renderAlarms(); }
+        function removeAlarm(i) { const a = JSON.parse(localStorage.getItem('alarms')); a.splice(i, 1); localStorage.setItem('alarms', JSON.stringify(a)); renderAlarms(); }
+
+        function checkAlarms(now) {
+            const currentMinute = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            const currentDateStr = now.toISOString().split('T')[0];
+            if (currentMinute !== lastCheckedMinute) {
+                lastCheckedMinute = currentMinute;
+                (JSON.parse(localStorage.getItem('alarms')) || []).forEach((alarm, index) => {
+                    if (alarm.active && alarm.time === currentMinute) {
+                        let shouldRing = true;
+                        if(alarm.monthDay && alarm.monthDay !== now.getDate()) shouldRing = false;
+                        if(alarm.days && alarm.days.length > 0 && !alarm.days.includes(now.getDay())) shouldRing = false;
+                        if(alarm.specificDate && alarm.specificDate !== currentDateStr) shouldRing = false;
+                        if(shouldRing) triggerAlarm(alarm, index);
+                    }
+                });
+            }
+        }
+
+        function triggerAlarm(alarm, index) {
+            currentRingingAlarm = { alarm, index };
+            document.getElementById('ringing-label').innerText = alarm.label;
+            document.getElementById('alarm-modal').style.display = 'flex';
+            document.getElementById('alarm-audio').play().catch(e => console.log("Audio blocked."));
+            
+            if ('Notification' in window && Notification.permission === 'granted') {
+                navigator.serviceWorker?.ready.then(reg => { reg.showNotification('Dashboard Alarm', { body: alarm.label, icon: 'profile.jpg', vibrate: [500, 200, 500] });
+                }).catch(() => { new Notification('Dashboard Alarm', { body: alarm.label, icon: 'profile.jpg' }); });
+            }
+            if(navigator.vibrate) navigator.vibrate([500,200,500,200,500]);
+        }
+
+        function stopAlarm() {
+            document.getElementById('alarm-audio').pause(); document.getElementById('alarm-audio').currentTime = 0; document.getElementById('alarm-modal').style.display = 'none';
+            const a = JSON.parse(localStorage.getItem('alarms'));
+            if(currentRingingAlarm && (!currentRingingAlarm.alarm.days || currentRingingAlarm.alarm.days.length === 0) && !currentRingingAlarm.alarm.monthDay && !currentRingingAlarm.alarm.specificDate) {
+                a[currentRingingAlarm.index].active = false; localStorage.setItem('alarms', JSON.stringify(a));
+            }
+            renderAlarms(); currentRingingAlarm = null;
+        }
+
+        function snoozeAlarm() {
+            const s = parseInt(document.getElementById('snooze-time').value); const n = new Date(); n.setMinutes(n.getMinutes() + s);
+            createInternalAlarm(n.getHours().toString().padStart(2, '0') + ':' + n.getMinutes().toString().padStart(2, '0'), "Snoozed: " + currentRingingAlarm.alarm.label);
+            document.getElementById('alarm-audio').pause(); document.getElementById('alarm-modal').style.display = 'none'; currentRingingAlarm = null;
+        }
+
+        // --- QUICK LISTS & ADVANCED LEDGER ---
+        let quickLists = JSON.parse(localStorage.getItem('quick-lists')) || [];
+        let editingContext = null; // Stores {listId, itemId}
+        
+        function saveLists() { localStorage.setItem('quick-lists', JSON.stringify(quickLists)); renderQuickLists(); }
+        function toggleForm(id) { const f = document.getElementById(id); f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
+        
+        function createNewList() {
+            const t = document.getElementById('new-list-name').value.trim(), ty = document.getElementById('new-list-type').value;
+            if(!t) return; 
+            let newList = { id: Date.now(), title: t, type: ty, items: [] };
+            if (ty === 'medicine') { newList.columns = ["Medicine Name", "Quantity", "Purchase Area"]; newList.sortCol = null; newList.sortAsc = true; }
+            quickLists.push(newList); document.getElementById('new-list-name').value = ''; toggleForm('create-list-form'); saveLists();
+        }
+
+        function deleteList(id) { if(confirm("Delete this entire list?")) { quickLists = quickLists.filter(l => l.id !== id); saveLists(); } }
+        function addListItem(listId) { const l = quickLists.find(l => l.id === listId), i = document.getElementById(`input-${listId}`); if(i.value.trim()) { l.items.push({ id: Date.now(), text: i.value, checked: false }); i.value = ''; saveLists(); } }
+        function addAccountItem(listId, type) { const l = quickLists.find(l => l.id === listId), n = document.getElementById(`acc-name-${listId}`), a = document.getElementById(`acc-amt-${listId}`); if(n.value.trim() && a.value) { l.items.push({ id: Date.now(), text: n.value, amount: type === 'expense' ? -Math.abs(a.value) : Math.abs(a.value) }); saveLists(); } }
+        function removeListItem(listId, itemId) { const l = quickLists.find(l => l.id === listId); l.items = l.items.filter(i => i.id !== itemId); saveLists(); }
+
+        function addLedgerColumn(listId) { const l = quickLists.find(l => l.id === listId), input = document.getElementById(`new-col-${listId}`); if(input.value.trim() && !l.columns.includes(input.value.trim())) { l.columns.push(input.value.trim()); saveLists(); } }
+        
+        // --- EDITING LOGIC ---
+        function openEditModal(listId, itemId) {
+            editingContext = { listId, itemId };
+            const list = quickLists.find(l => l.id === listId);
+            const item = list.items.find(i => i.id === itemId);
+            const container = document.getElementById('edit-ledger-inputs');
+            container.innerHTML = '';
+
+            list.columns.forEach(col => {
+                container.innerHTML += `<label style="color:#aaa; font-size:0.85rem;">${col}</label>
+                <input type="text" id="edit-val-${col.replace(/\s/g, '')}" value="${item.data[col] || ''}">`;
+            });
+            container.innerHTML += `<label style="color:#aaa; font-size:0.85rem;">Amount (Use - for expense)</label>
+            <input type="number" id="edit-val-Amount" value="${item.amount || 0}">`;
+            
+            document.getElementById('edit-ledger-modal').style.display = 'flex';
+        }
+
+        function saveLedgerEdit() {
+            if(!editingContext) return;
+            const list = quickLists.find(l => l.id === editingContext.listId);
+            const item = list.items.find(i => i.id === editingContext.itemId);
+            
+            list.columns.forEach(col => { item.data[col] = document.getElementById(`edit-val-${col.replace(/\s/g, '')}`).value; });
+            item.amount = parseFloat(document.getElementById(`edit-val-Amount`).value) || 0;
+            
+            document.getElementById('edit-ledger-modal').style.display = 'none';
+            editingContext = null; saveLists();
+        }
+
+        function addMedicineRow(listId) {
+            const l = quickLists.find(l => l.id === listId); let rowData = {};
+            l.columns.forEach(col => { rowData[col] = document.getElementById(`add-val-${listId}-${col.replace(/\s/g, '')}`).value; });
+            const amt = parseFloat(document.getElementById(`add-val-${listId}-Amount`).value) || 0;
+            const rDate = document.getElementById(`add-date-${listId}`).value; const rTime = document.getElementById(`add-time-${listId}`).value;
+
+            l.items.push({ id: Date.now(), data: rowData, amount: amt });
+            if (rDate && rTime) { createInternalAlarm(rTime, `Purchase reminder: ${rowData[l.columns[0]] || "Item"}`, [], null, rDate); alert(`Reminder set for ${rDate} at ${rTime}`); }
+            saveLists();
+        }
+
+        function renderQuickLists() {
+            const c = document.getElementById('quick-lists-container'); c.innerHTML = '';
+            quickLists.forEach(list => {
+                const card = document.createElement('div'); card.style.cssText = "background: rgba(0,0,0,0.4); border-radius: 8px; padding: 12px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);";
+                let html = `<div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px dotted #555; padding-bottom:5px;">
+                    <b style="color:var(--primary-color)">${list.title}</b> <button class="danger small" onclick="deleteList(${list.id})">Del List</button></div>`;
+
+                if(list.type === 'name' || list.type === 'check') {
+                    list.items.forEach(item => { html += `<div class="q-item" data-id="${item.id}"><div style="flex-grow:1; display:flex; align-items:center;">${list.type === 'check' ? `<input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleCheck(${list.id}, ${item.id})">` : ''}<span style="${item.checked ? 'text-decoration:line-through; color:#888;' : ''}">${item.text}</span></div><div class="action-btns"><button class="danger" onclick="removeListItem(${list.id}, ${item.id})">Del</button></div></div>`; });
+                    html += `<div style="display:flex; gap:5px; margin-top:10px;"><input type="text" id="input-${list.id}" placeholder="Add item..." style="margin:0;"><button onclick="addListItem(${list.id})">+</button></div>`;
+                } 
+                else if (list.type === 'account') {
+                    let total = 0;
+                    list.items.forEach(item => {
+                        total += item.amount; html += `<div class="q-item" data-id="${item.id}"><span>${item.text}</span><div style="display:flex; align-items:center;"><b style="color:${item.amount >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}; margin-right:10px;">${item.amount > 0 ? '+' : ''}${item.amount.toFixed(2)}</b><div class="action-btns"><button class="danger" onclick="removeListItem(${list.id}, ${item.id})">Del</button></div></div></div>`;
+                    });
+                    html += `<div style="display:flex; justify-content:space-between; font-weight:bold; padding-top:10px; border-top:2px solid #555; font-size:1.1rem;"><span>Balance:</span><span style="color:${total >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}">${total > 0 ? '+' : ''}${total.toFixed(2)}</span></div>
+                        <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;"><input type="text" id="acc-name-${list.id}" placeholder="Entry Name" style="flex: 2; margin:0; min-width:100px;"><input type="number" id="acc-amt-${list.id}" placeholder="Amount" style="flex: 1; margin:0; min-width:70px;"><button class="success" onclick="addAccountItem(${list.id}, 'income')">+</button><button class="danger" onclick="addAccountItem(${list.id}, 'expense')">-</button></div>`;
+                }
+                else if (list.type === 'medicine') {
+                    html += `<div class="table-container"><table><thead><tr>`;
+                    list.columns.forEach(col => { html += `<th>${col}</th>`; });
+                    html += `<th style="text-align:right;">Amount</th><th style="width:100px;"></th></tr></thead><tbody>`;
+                    
+                    let totalAmt = 0;
+                    list.items.forEach(item => {
+                        totalAmt += item.amount;
+                        html += `<tr data-id="${item.id}">`;
+                        list.columns.forEach(col => { html += `<td><span>${item.data[col] || ''}</span></td>`; });
+                        html += `<td class="amount-col" style="color:${item.amount >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}"><span>${item.amount > 0 ? '+' : ''}${item.amount.toFixed(2)}</span></td>
+                        <td><div class="action-btns"><button class="success small" onclick="openEditModal(${list.id}, ${item.id})">Edit</button><button class="danger small" onclick="removeListItem(${list.id}, ${item.id})">Del</button></div></td></tr>`;
+                    });
+                    html += `<tr style="border-top: 2px solid #555;"><td colspan="${list.columns.length}"><strong>Total Balance:</strong></td><td class="amount-col" style="color:${totalAmt >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}">${totalAmt > 0 ? '+' : ''}${totalAmt.toFixed(2)}</td><td></td></tr></tbody></table></div>`;
+
+                    html += `<div style="display:flex; gap:5px; margin-top:10px;"><input type="text" id="new-col-${list.id}" placeholder="New Column Name" style="margin:0;"><button onclick="addLedgerColumn(${list.id})">Add Column</button></div>`;
+                    html += `<div style="margin-top:15px; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;"><div style="font-weight:bold; margin-bottom:5px;">Add Ledger Entry</div><div style="display:flex; flex-wrap:wrap; gap:5px;">`;
+                    list.columns.forEach(col => { html += `<input type="text" id="add-val-${list.id}-${col.replace(/\s/g, '')}" placeholder="${col}" style="flex:1; min-width:100px; margin:0;">`; });
+                    html += `<input type="number" id="add-val-${list.id}-Amount" placeholder="Amount (Use - for expense)" style="flex:1; min-width:120px; margin:0;"></div>
+                        <div style="display:flex; gap:5px; margin-top:5px; align-items:center; flex-wrap:wrap;"><span style="font-size:0.8rem; color:#aaa; flex-basis:100%;">Next Purchase Alarm (Optional):</span><input type="date" id="add-date-${list.id}" style="flex:1; margin:0;"><input type="time" id="add-time-${list.id}" style="flex:1; margin:0;"><button class="success" onclick="addMedicineRow(${list.id})" style="flex:1;">Save Data</button></div></div>`;
+                }
+                card.innerHTML = html; c.appendChild(card);
+            });
+        }
+
+        // Init Remaining
+        function renderWebsites() { const c = document.getElementById('site-list'); c.innerHTML = ''; (JSON.parse(localStorage.getItem('websites')) || []).forEach((s, i) => { c.innerHTML += `<div class="list-item"><a href="${s.url}" target="_blank">${s.name}</a><div class="action-btns"><button class="danger" onclick="removeData('websites', ${i})">Del</button></div></div>`; }); }
+        function addWebsite() { const n = document.getElementById('site-name').value, u = document.getElementById('site-url').value; if(n && u) { const a = JSON.parse(localStorage.getItem('websites')) || []; a.push({name:n, url:u.startsWith('http')?u:'https://'+u}); localStorage.setItem('websites', JSON.stringify(a)); renderWebsites(); toggleForm('site-form'); } }
+        function renderContacts() { const c = document.getElementById('contact-list'); c.innerHTML = ''; (JSON.parse(localStorage.getItem('contacts')) || []).forEach((ct, i) => { c.innerHTML += `<div class="list-item"><span>${ct.name}</span><div style="display:flex; gap:10px;"><a href="tel:${ct.phone}" class="action-icon-btn btn-call">📞</a><a href="whatsapp://send?phone=${ct.phone}" class="action-icon-btn btn-wa">💬</a></div><div class="action-btns"><button class="danger" onclick="removeData('contacts', ${i})">Del</button></div></div>`; }); }
+        function addContact() { const n = document.getElementById('contact-name').value, p = document.getElementById('contact-phone').value; if(n && p) { const a = JSON.parse(localStorage.getItem('contacts')) || []; a.push({name:n, phone:p}); localStorage.setItem('contacts', JSON.stringify(a)); renderContacts(); toggleForm('contact-form'); } }
+        function renderApps() { const c = document.getElementById('app-list'); c.innerHTML = ''; (JSON.parse(localStorage.getItem('apps')) || []).forEach((a, i) => { c.innerHTML += `<div class="list-item" onclick="window.location.href='${a.url}'" style="cursor:pointer;"><img src="${a.icon || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\'><rect width=\'40\' height=\'40\' fill=\'%23444\' rx=\'8\'/></svg>'}" style="width:35px;height:35px;border-radius:8px;margin-right:12px;"><span style="flex-grow:1;">${a.name}</span><div class="action-btns"><button class="danger" onclick="event.stopPropagation(); removeData('apps', ${i})">Del</button></div></div>`; }); }
+        function addApp() { const n = document.getElementById('app-name').value, u = document.getElementById('app-intent').value, f = document.getElementById('app-icon').files[0]; if(n && u) { const save = ic => { const a = JSON.parse(localStorage.getItem('apps')) || []; a.push({name:n, url:u, icon:ic}); localStorage.setItem('apps', JSON.stringify(a)); renderApps(); toggleForm('app-form'); }; if(f) { const r = new FileReader(); r.onload = e => save(e.target.result); r.readAsDataURL(f); } else save(null); } }
+        function removeData(k, i) { const a = JSON.parse(localStorage.getItem(k)); a.splice(i, 1); localStorage.setItem(k, JSON.stringify(a)); if(k==='websites') renderWebsites(); if(k==='contacts') renderContacts(); if(k==='apps') renderApps(); }
+
+        renderWebsites(); renderContacts(); renderApps(); renderAlarms(); renderQuickLists();
+    </script>
+
+</body></html>
