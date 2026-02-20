@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Personal Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #bb86fc;
+            --success-color: #03dac6;
+            --text-color: #e0e0e0;
+            --danger-color: #cf6679;
+            --wa-color: #25D366;
+            --call-color: #4CAF50;
+            --border-radius: 12px;
+            --panel-bg: rgba(25, 25, 25, 0.75);
+            --panel-blur: blur(12px);
+            
+            --cube-x: -25deg;
+            --cube-z: 0deg;
+            --cube-speed: 8s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; padding: 20px; padding-bottom: 80px;
+            color: var(--text-color);
+            background-color: #121212;
+            background-image: url('background.png');
+            background-size: cover; background-position: center; background-attachment: fixed;
+            transition: background-image 0.5s ease;
+            -webkit-user-select: none; user-select: none; /* Prevents text selection on long press */
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            backdrop-filter: var(--panel-blur); -webkit-backdrop-filter: var(--panel-blur);
+            padding: 15px; border-radius: var(--border-radius);
+            margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Header & Clock */
+        .header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .profile-img { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .header-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+        .clock-container { text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+        .time { font-size: 2rem; font-weight: bold; color: var(--primary-color); letter-spacing: 1px; }
+        .time-sec { font-size: 1rem; color: #aaa; margin-left: 2px; }
+        .ampm { font-size: 1rem; color: #fff; margin-left: 5px; font-weight: normal; }
+        .date { font-size: 0.85rem; color: #ccc; margin-top: -5px; }
+        
+        .cube-settings-btn {
+            margin-top: 8px; font-size: 0.85rem; color: #aaa; background: rgba(0,0,0,0.5);
+            padding: 4px 10px; border-radius: 20px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
+            display: inline-flex; align-items: center; gap: 5px; transition: 0.2s;
+        }
+        .cube-settings-btn:active { background: var(--primary-color); color: #000; }
+
+        /* 3D Cube */
+        .scene-container { position: relative; width: 140px; margin: 30px auto; }
+        .scene { width: 120px; height: 120px; perspective: 600px; margin: 0 auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; animation: rotateCube var(--cube-speed) infinite linear; }
+        .cube.paused { animation-play-state: paused; }
+        .cube__face {
+            position: absolute; width: 120px; height: 120px;
+            background-image: url('cube.png'); background-size: cover; background-position: center;
+            border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        .cube__face--front  { transform: rotateY(  0deg) translateZ(60px); }
+        .cube__face--right  { transform: rotateY( 90deg) translateZ(60px); }
+        .cube__face--back   { transform: rotateY(180deg) translateZ(60px); }
+        .cube__face--left   { transform: rotateY(-90deg) translateZ(60px); }
+        .cube__face--top    { transform: rotateX( 90deg) translateZ(60px); }
+        .cube__face--bottom { transform: rotateX(-90deg) translateZ(60px); }
+
+        @keyframes rotateCube {
+            from { transform: translateZ(-60px) rotateX(var(--cube-x)) rotateZ(var(--cube-z)) rotateY(0deg); }
+            to   { transform: translateZ(-60px) rotateX(var(--cube-x)) rotateZ(var(--cube-z)) rotateY(360deg); }
+        }
+
+        /* UI Elements */
+        h2 { font-size: 1.2rem; margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; display: flex; justify-content: space-between; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        button { background-color: var(--primary-color); color: #000; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        button.danger { background-color: var(--danger-color); color: #fff; }
+        button.success { background-color: var(--success-color); color: #000; }
+        button.small { padding: 4px 8px; font-size: 0.8rem; }
+
+        input, select { width: 100%; padding: 10px; margin: 5px 0 15px 0; background-color: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; box-sizing: border-box; }
+        input[type="range"] { padding: 0; }
+        input[type="checkbox"] { width: auto; transform: scale(1.3); margin-right: 5px; accent-color: var(--primary-color); }
+
+        /* Custom Weekday Selector */
+        .weekday-selector { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .day-label { display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; color: #ccc; }
+        .day-label input { margin: 5px 0 0 0; }
+
+        /* LONG PRESS DELETION LOGIC */
+        .list-item, .q-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); 
+            transition: all 0.3s ease; border-radius: 6px;
+        }
+        .list-item a, .list-item span { color: var(--text-color); text-decoration: none; font-size: 1.1rem; flex-grow: 1; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: none; }
+        
+        .delete-btn { display: none; margin-left: 10px; animation: popIn 0.2s ease forwards; }
+        .show-delete { background: rgba(207, 102, 121, 0.15) !important; border-left: 3px solid var(--danger-color); }
+        .show-delete .delete-btn { display: block; }
+        .show-delete a, .show-delete span { pointer-events: none; opacity: 0.5; }
+
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* Specialized Buttons */
+        .action-icon-btn { display: flex; justify-content: center; align-items: center; width: 35px; height: 35px; border-radius: 50%; text-decoration: none; font-size: 1.1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.4); pointer-events: auto !important; }
+        .btn-call { background-color: var(--call-color); }
+        .btn-wa { background-color: var(--wa-color); }
+
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: var(--panel-bg); backdrop-filter: var(--panel-blur); padding: 20px; border-radius: var(--border-radius); width: 90%; max-width: 400px; border: 1px solid rgba(255,255,255,0.2); }
+        #ringing-label { color: var(--primary-color); font-size: 2.5rem; text-align: center; animation: blink 1s infinite; margin-top: 0; }
+    </style>
+</head>
+<body>
+
+    <input type="file" id="bg-upload" accept="image/*" style="display: none;">
+
+    <div class="panel header">
+        <img src="profile.jpg" alt="Profile" class="profile-img" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'55\' height=\'55\'><rect width=\'55\' height=\'55\' fill=\'%23555\'/></svg>'">
+        <div class="header-right">
+            <div class="clock-container">
+                <div class="time" id="clock">12:00<span class="time-sec" id="clock-sec">:00</span><span class="ampm" id="clock-ampm">AM</span></div>
+                <div class="date" id="date">Loading...</div>
+            </div>
+            <div class="cube-settings-btn" onclick="openCubeSettings()">⚙️ Settings</div>
+        </div>
+    </div>
+
+    <div class="scene-container" title="Long press to change background">
+        <div class="scene" id="cube-container">
+            <div class="cube" id="the-cube">
+                <div class="cube__face cube__face--front"></div>
+                <div class="cube__face cube__face--back"></div>
+                <div class="cube__face cube__face--right"></div>
+                <div class="cube__face cube__face--left"></div>
+                <div class="cube__face cube__face--top"></div>
+                <div class="cube__face cube__face--bottom"></div>
+            </div>
+        </div>
+    </div>
+    <div style="text-align: center; color: #ccc; font-size: 0.8rem; margin-top: -10px; margin-bottom: 20px; text-shadow: 1px 1px 2px #000;">
+        Long press cube to change background • Long press lists to delete
+    </div>
+
+    <div class="panel">
+        <h2>Quick Lists <button onclick="toggleForm('create-list-form')">+ New</button></h2>
+        <div id="create-list-form" style="display: none; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+            <input type="text" id="new-list-name" placeholder="List Title (e.g., Shopping, Accounts)">
+            <select id="new-list-type">
+                <option value="name">Standard List</option>
+                <option value="check">Checklist</option>
+                <option value="account">Accounting Ledger (In/Out)</option>
+            </select>
+            <button onclick="createNewList()" style="width: 100%;">Create List</button>
+        </div>
+        <div id="quick-lists-container"></div>
+    </div>
+
+    <div class="panel">
+        <h2>Alarms / Reminders <button onclick="toggleForm('alarm-form')">+ Add</button></h2>
+        <div id="alarm-form" style="display: none;">
+            <input type="time" id="alarm-time">
+            <input type="text" id="alarm-label" placeholder="Reminder Name">
+            
+            <label style="font-size: 0.85rem; color: #ccc;">Repeat on specific days (Optional):</label>
+            <div class="weekday-selector">
+                <label class="day-label">S<input type="checkbox" class="alarm-day" value="0"></label>
+                <label class="day-label">M<input type="checkbox" class="alarm-day" value="1"></label>
+                <label class="day-label">T<input type="checkbox" class="alarm-day" value="2"></label>
+                <label class="day-label">W<input type="checkbox" class="alarm-day" value="3"></label>
+                <label class="day-label">T<input type="checkbox" class="alarm-day" value="4"></label>
+                <label class="day-label">F<input type="checkbox" class="alarm-day" value="5"></label>
+                <label class="day-label">S<input type="checkbox" class="alarm-day" value="6"></label>
+            </div>
+            
+            <label style="font-size: 0.85rem; color: #ccc;">Or specific date of the month (Optional):</label>
+            <input type="number" id="alarm-monthday" placeholder="E.g., 15 (for the 15th of every month)" min="1" max="31">
+            
+            <button onclick="addAlarm()" style="width: 100%;">Save Alarm</button>
+        </div>
+        <div id="alarm-list"></div>
+    </div>
+
+    <div class="panel">
+        <h2>Quick Contacts <button onclick="toggleForm('contact-form')">+ Add</button></h2>
+        <div id="contact-form" style="display: none;">
+            <input type="text" id="contact-name" placeholder="Contact Name">
+            <input type="number" id="contact-phone" placeholder="Phone (e.g. +919876543210)">
+            <button onclick="addContact()">Save Contact</button>
+        </div>
+        <div id="contact-list"></div>
+    </div>
+
+    <div class="panel">
+        <h2>Quick Apps <button onclick="toggleForm('app-form')">+ Add</button></h2>
+        <div id="app-form" style="display: none;">
+            <input type="text" id="app-name" placeholder="App Name">
+            <input type="text" id="app-intent" placeholder="App Intent URL">
+            <label style="font-size: 0.85rem; color: #ccc;">App Icon (Optional):</label>
+            <input type="file" id="app-icon" accept="image/*">
+            <button onclick="addApp()">Save App</button>
+        </div>
+        <div id="app-list"></div>
+    </div>
+
+    <div class="panel">
+        <h2>Websites <button onclick="toggleForm('site-form')">+ Add</button></h2>
+        <div id="site-form" style="display: none;">
+            <input type="text" id="site-name" placeholder="Website Name">
+            <input type="text" id="site-url" placeholder="URL (e.g., google.com)">
+            <button onclick="addWebsite()">Save Website</button>
+        </div>
+        <div id="site-list"></div>
+    </div>
+
+    <audio id="alarm-audio" loop><source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg"></audio>
+
+    <div id="alarm-modal" class="modal-overlay">
+        <div class="modal-content" style="background: rgba(0,0,0,0.95); text-align: center;">
+            <h1 id="ringing-label">Alarm!</h1>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <select id="snooze-time" style="width: auto; margin: 0;">
+                    <option value="5">Snooze 5 min</option>
+                    <option value="10">Snooze 10 min</option>
+                </select>
+                <button onclick="snoozeAlarm()">Snooze</button>
+                <button class="danger" onclick="stopAlarm()">Stop</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cube-settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 20px;">Cube Display Settings</h2>
+            <label style="color: #aaa; font-size: 0.9rem;">Standing Position (X Tilt - Up/Down)</label>
+            <input type="range" id="setting-x" min="-90" max="90" value="-25" oninput="updateCubePreview()">
+            <label style="color: #aaa; font-size: 0.9rem;">Standing Position (Z Roll - Side)</label>
+            <input type="range" id="setting-z" min="-90" max="90" value="0" oninput="updateCubePreview()">
+            <label style="color: #aaa; font-size: 0.9rem;">Rotation Speed (Seconds per spin)</label>
+            <input type="range" id="setting-speed" min="0" max="20" value="8" step="0.5" oninput="updateCubePreview()">
+            <div style="text-align: right; font-size: 0.8rem; color: #888; margin-top: -10px; margin-bottom: 15px;">0 = Paused</div>
+            <div style="display: flex; justify-content: space-between;">
+                <button class="danger" onclick="closeCubeSettings()">Close</button>
+                <button class="success" onclick="saveCubeSettings()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL LONG PRESS DELETION LOGIC ---
+        let listPressTimer;
+        
+        // Listen globally to touches/clicks to trigger edit mode
+        function startPress(e) {
+            const itemRow = e.target.closest('.list-item, .q-item');
+            if (!itemRow || e.target.closest('button, .action-icon-btn, input')) return; // Ignore if clicking an existing button/input
+            
+            listPressTimer = setTimeout(() => {
+                // Clear others
+                document.querySelectorAll('.show-delete').forEach(el => el.classList.remove('show-delete'));
+                itemRow.classList.add('show-delete');
+                if('vibrate' in navigator) navigator.vibrate(50);
+            }, 600);
+        }
+
+        function cancelPress() { clearTimeout(listPressTimer); }
+
+        // Clicking anywhere else removes the delete states
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.list-item, .q-item')) {
+                document.querySelectorAll('.show-delete').forEach(el => el.classList.remove('show-delete'));
+            }
+        });
+
+        document.body.addEventListener('touchstart', startPress, {passive: true});
+        document.body.addEventListener('mousedown', startPress);
+        ['touchend', 'touchmove', 'mouseup', 'mouseleave'].forEach(evt => document.body.addEventListener(evt, cancelPress));
+
+        // --- BACKGROUND LOGIC ---
+        function loadBackground() {
+            const savedBg = localStorage.getItem('custom-bg');
+            if (savedBg) document.body.style.backgroundImage = `url('${savedBg}')`;
+            else document.body.style.backgroundImage = `url('background.png')`;
+        }
+        loadBackground();
+
+        const cubeBgEl = document.getElementById('cube-container');
+        const bgInput = document.getElementById('bg-upload');
+        let bgPressTimer;
+        
+        cubeBgEl.addEventListener('touchstart', (e) => { bgPressTimer = setTimeout(() => bgInput.click(), 600); }, {passive:true});
+        cubeBgEl.addEventListener('mousedown', () => { bgPressTimer = setTimeout(() => bgInput.click(), 600); });
+        ['touchend','touchmove','mouseup','mouseleave'].forEach(evt => cubeBgEl.addEventListener(evt, () => clearTimeout(bgPressTimer)));
+
+        bgInput.addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    try { localStorage.setItem('custom-bg', ev.target.result); loadBackground(); } 
+                    catch (err) { alert("Image too large. Choose a smaller file."); }
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        // --- CLOCK ---
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12;
+            
+            document.getElementById('clock').innerHTML = `${hours}:${now.getMinutes().toString().padStart(2, '0')}<span class="time-sec">:${now.getSeconds().toString().padStart(2, '0')}</span><span class="ampm">${ampm}</span>`;
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            checkAlarms(now);
+            requestAnimationFrame(updateClock);
+        }
+        requestAnimationFrame(updateClock);
+
+        // --- CUBE SETTINGS ---
+        function loadCubeSettings() {
+            const root = document.documentElement;
+            root.style.setProperty('--cube-x', `${localStorage.getItem('cube-x') || '-25'}deg`);
+            root.style.setProperty('--cube-z', `${localStorage.getItem('cube-z') || '0'}deg`);
+            const speed = localStorage.getItem('cube-speed') || '8';
+            if(parseFloat(speed) === 0) { document.getElementById('the-cube').classList.add('paused'); } 
+            else { document.getElementById('the-cube').classList.remove('paused'); root.style.setProperty('--cube-speed', `${speed}s`); }
+        }
+        loadCubeSettings();
+
+        function openCubeSettings() {
+            document.getElementById('setting-x').value = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cube-x')) || -25;
+            document.getElementById('setting-z').value = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cube-z')) || 0;
+            document.getElementById('setting-speed').value = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cube-speed')) || 8;
+            document.getElementById('cube-settings-modal').style.display = 'flex';
+        }
+        function closeCubeSettings() { document.getElementById('cube-settings-modal').style.display = 'none'; loadCubeSettings(); }
+        function updateCubePreview() {
+            const root = document.documentElement; const speed = document.getElementById('setting-speed').value;
+            root.style.setProperty('--cube-x', `${document.getElementById('setting-x').value}deg`);
+            root.style.setProperty('--cube-z', `${document.getElementById('setting-z').value}deg`);
+            if(parseFloat(speed) === 0) document.getElementById('the-cube').classList.add('paused');
+            else { document.getElementById('the-cube').classList.remove('paused'); root.style.setProperty('--cube-speed', `${speed}s`); }
+        }
+        function saveCubeSettings() {
+            localStorage.setItem('cube-x', document.getElementById('setting-x').value);
+            localStorage.setItem('cube-z', document.getElementById('setting-z').value);
+            localStorage.setItem('cube-speed', document.getElementById('setting-speed').value);
+            closeCubeSettings();
+        }
+
+        // --- RENDERERS ---
+        function toggleForm(id) { const f = document.getElementById(id); f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
+        
+        // Websites
+        function renderWebsites() {
+            const sites = JSON.parse(localStorage.getItem('websites')) || [];
+            const c = document.getElementById('site-list'); c.innerHTML = '';
+            sites.forEach((s, i) => {
+                c.innerHTML += `<div class="list-item"><a href="${s.url}" target="_blank">${s.name}</a>
+                <button class="danger delete-btn" onclick="removeData('websites', ${i})">Delete</button></div>`;
+            });
+        }
+        function addWebsite() {
+            const n = document.getElementById('site-name').value, u = document.getElementById('site-url').value;
+            if(!n || !u) return alert("Fill fields");
+            const arr = JSON.parse(localStorage.getItem('websites')) || [];
+            arr.push({name: n, url: u.startsWith('http') ? u : 'https://'+u});
+            localStorage.setItem('websites', JSON.stringify(arr));
+            document.getElementById('site-name').value = ''; document.getElementById('site-url').value = ''; toggleForm('site-form'); renderWebsites();
+        }
+
+        // Contacts (Dual Buttons)
+        function renderContacts() {
+            const contacts = JSON.parse(localStorage.getItem('contacts')) || [];
+            const c = document.getElementById('contact-list'); c.innerHTML = '';
+            contacts.forEach((ct, i) => {
+                c.innerHTML += `<div class="list-item">
+                    <span>${ct.name}</span>
+                    <div style="display:flex; gap:10px;">
+                        <a href="tel:${ct.phone}" class="action-icon-btn btn-call" title="Call">📞</a>
+                        <a href="whatsapp://send?phone=${ct.phone}" class="action-icon-btn btn-wa" title="WhatsApp">💬</a>
+                    </div>
+                    <button class="danger delete-btn" onclick="removeData('contacts', ${i})">Delete</button>
+                </div>`;
+            });
+        }
+        function addContact() {
+            const n = document.getElementById('contact-name').value, p = document.getElementById('contact-phone').value;
+            if(!n || !p) return alert("Fill fields");
+            const arr = JSON.parse(localStorage.getItem('contacts')) || [];
+            arr.push({name: n, phone: p}); localStorage.setItem('contacts', JSON.stringify(arr));
+            document.getElementById('contact-name').value = ''; document.getElementById('contact-phone').value = ''; toggleForm('contact-form'); renderContacts();
+        }
+
+        // Apps (With Image)
+        function renderApps() {
+            const apps = JSON.parse(localStorage.getItem('apps')) || [];
+            const c = document.getElementById('app-list'); c.innerHTML = '';
+            apps.forEach((a, i) => {
+                const defaultIcon = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23444" rx="8"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23fff" font-size="20">📱</text></svg>';
+                c.innerHTML += `<div class="list-item" onclick="window.location.href='${a.url}'" style="cursor:pointer;">
+                    <img src="${a.icon || defaultIcon}" style="width:35px;height:35px;border-radius:8px;margin-right:12px;object-fit:cover;">
+                    <span>${a.name}</span>
+                    <button class="danger delete-btn" onclick="event.stopPropagation(); removeData('apps', ${i})">Delete</button>
+                </div>`;
+            });
+        }
+        function addApp() {
+            const n = document.getElementById('app-name').value, u = document.getElementById('app-intent').value, file = document.getElementById('app-icon').files[0];
+            if(!n || !u) return alert("Fill fields");
+            const save = (iconData) => {
+                const arr = JSON.parse(localStorage.getItem('apps')) || [];
+                arr.push({name: n, url: u, icon: iconData}); localStorage.setItem('apps', JSON.stringify(arr));
+                document.getElementById('app-name').value = ''; document.getElementById('app-intent').value = ''; document.getElementById('app-icon').value = '';
+                toggleForm('app-form'); renderApps();
+            };
+            if(file) { const r = new FileReader(); r.onload = (e) => save(e.target.result); r.readAsDataURL(file); } else save(null);
+        }
+
+        function removeData(key, i) {
+            const arr = JSON.parse(localStorage.getItem(key)); arr.splice(i, 1); localStorage.setItem(key, JSON.stringify(arr));
+            if(key==='websites') renderWebsites(); if(key==='contacts') renderContacts(); if(key==='apps') renderApps();
+        }
+
+        // --- ALARMS LOGIC ---
+        let currentRingingAlarm = null; let lastCheckedMinute = null;
+
+        function renderAlarms() {
+            const alarms = JSON.parse(localStorage.getItem('alarms')) || [];
+            const c = document.getElementById('alarm-list'); c.innerHTML = '';
+            const dayMap = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            
+            alarms.forEach((a, i) => {
+                let [h, m] = a.time.split(':'); let ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+                let subtext = [];
+                if(a.days && a.days.length > 0) subtext.push(a.days.map(d => dayMap[d]).join(', '));
+                if(a.monthDay) subtext.push(`Day ${a.monthDay}`);
+                if(subtext.length === 0) subtext.push('Once/Daily');
+                
+                c.innerHTML += `<div class="list-item">
+                    <div style="display:flex; flex-direction:column; flex-grow:1; pointer-events:none;">
+                        <span>${h}:${m} ${ampm} - <strong>${a.label}</strong></span>
+                        <span style="font-size:0.75rem; color:#aaa;">${subtext.join(' | ')}</span>
+                    </div>
+                    <div><button class="small" onclick="event.stopPropagation(); toggleAlarm(${i})" style="background:${a.active ? 'var(--primary-color)' : '#555'}">${a.active ? 'ON' : 'OFF'}</button></div>
+                    <button class="danger delete-btn" onclick="event.stopPropagation(); removeAlarm(${i})">Delete</button>
+                </div>`;
+            });
+        }
+
+        function addAlarm() {
+            const time = document.getElementById('alarm-time').value, label = document.getElementById('alarm-label').value || 'Alarm';
+            const mDay = document.getElementById('alarm-monthday').value;
+            const days = Array.from(document.querySelectorAll('.alarm-day:checked')).map(cb => parseInt(cb.value));
+            
+            if (!time) return alert('Set a time');
+            const alarms = JSON.parse(localStorage.getItem('alarms')) || [];
+            alarms.push({ time, label, active: true, days: days, monthDay: mDay ? parseInt(mDay) : null }); 
+            localStorage.setItem('alarms', JSON.stringify(alarms));
+            
+            document.getElementById('alarm-time').value = ''; document.getElementById('alarm-label').value = ''; document.getElementById('alarm-monthday').value = '';
+            document.querySelectorAll('.alarm-day').forEach(cb => cb.checked = false);
+            toggleForm('alarm-form'); renderAlarms();
+        }
+
+        function toggleAlarm(i) { const a = JSON.parse(localStorage.getItem('alarms')); a[i].active = !a[i].active; localStorage.setItem('alarms', JSON.stringify(a)); renderAlarms(); }
+        function removeAlarm(i) { const a = JSON.parse(localStorage.getItem('alarms')); a.splice(i, 1); localStorage.setItem('alarms', JSON.stringify(a)); renderAlarms(); }
+
+        function checkAlarms(now) {
+            const currentMinute = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            if (currentMinute !== lastCheckedMinute) {
+                lastCheckedMinute = currentMinute;
+                const todayDay = now.getDay();
+                const todayDate = now.getDate();
+                
+                (JSON.parse(localStorage.getItem('alarms')) || []).forEach((alarm, index) => {
+                    if (alarm.active && alarm.time === currentMinute) {
+                        let shouldRing = true;
+                        // Check specific date requirement
+                        if(alarm.monthDay && alarm.monthDay !== todayDate) shouldRing = false;
+                        // Check specific weekday requirement
+                        if(alarm.days && alarm.days.length > 0 && !alarm.days.includes(todayDay)) shouldRing = false;
+                        
+                        if(shouldRing) triggerAlarm(alarm, index);
+                    }
+                });
+            }
+        }
+
+        function triggerAlarm(alarm, index) {
+            currentRingingAlarm = { alarm, index };
+            document.getElementById('ringing-label').innerText = alarm.label;
+            document.getElementById('alarm-modal').style.display = 'flex';
+            document.getElementById('alarm-audio').play().catch(e => console.log("Audio blocked."));
+        }
+
+        function stopAlarm() {
+            document.getElementById('alarm-audio').pause(); document.getElementById('alarm-audio').currentTime = 0;
+            document.getElementById('alarm-modal').style.display = 'none';
+            const a = JSON.parse(localStorage.getItem('alarms'));
+            if(currentRingingAlarm && (!currentRingingAlarm.alarm.days || currentRingingAlarm.alarm.days.length === 0) && !currentRingingAlarm.alarm.monthDay) {
+                // Only turn off if it was a one-time alarm
+                a[currentRingingAlarm.index].active = false; localStorage.setItem('alarms', JSON.stringify(a));
+            }
+            renderAlarms(); currentRingingAlarm = null;
+        }
+
+        function snoozeAlarm() {
+            const snoozeMins = parseInt(document.getElementById('snooze-time').value);
+            const now = new Date(); now.setMinutes(now.getMinutes() + snoozeMins);
+            const newTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            const a = JSON.parse(localStorage.getItem('alarms'));
+            a.push({ time: newTime, label: "Snoozed: " + currentRingingAlarm.alarm.label, active: true, days: [], monthDay: null });
+            localStorage.setItem('alarms', JSON.stringify(a));
+            document.getElementById('alarm-audio').pause(); document.getElementById('alarm-modal').style.display = 'none'; renderAlarms();
+        }
+
+        // --- QUICK LISTS ---
+        let quickLists = JSON.parse(localStorage.getItem('quick-lists')) || [];
+        function saveLists() { localStorage.setItem('quick-lists', JSON.stringify(quickLists)); renderQuickLists(); }
+        function createNewList() {
+            const t = document.getElementById('new-list-name').value.trim(), ty = document.getElementById('new-list-type').value;
+            if(!t) return; quickLists.push({ id: Date.now(), title: t, type: ty, items: [] });
+            document.getElementById('new-list-name').value = ''; toggleForm('create-list-form'); saveLists();
+        }
+        function deleteList(id) { if(confirm("Delete this entire list?")) { quickLists = quickLists.filter(l => l.id !== id); saveLists(); } }
+        
+        function addListItem(listId) {
+            const list = quickLists.find(l => l.id === listId); const input = document.getElementById(`input-${listId}`);
+            if(!input.value.trim()) return;
+            list.items.push({ id: Date.now(), text: input.value, checked: false }); input.value = ''; saveLists();
+        }
+        function addAccountItem(listId, type) {
+            const list = quickLists.find(l => l.id === listId);
+            const nameInput = document.getElementById(`acc-name-${listId}`), amtInput = document.getElementById(`acc-amt-${listId}`);
+            if(!nameInput.value.trim() || !amtInput.value) return;
+            let amt = parseFloat(amtInput.value); amt = type === 'expense' ? -Math.abs(amt) : Math.abs(amt);
+            list.items.push({ id: Date.now(), text: nameInput.value, amount: amt }); saveLists();
+        }
+        function removeListItem(listId, itemId) { const list = quickLists.find(l => l.id === listId); list.items = list.items.filter(i => i.id !== itemId); saveLists(); }
+        function toggleCheck(listId, itemId) { const list = quickLists.find(l => l.id === listId); const item = list.items.find(i => i.id === itemId); item.checked = !item.checked; saveLists(); }
+
+        function renderQuickLists() {
+            const c = document.getElementById('quick-lists-container'); c.innerHTML = '';
+            quickLists.forEach(list => {
+                const card = document.createElement('div'); card.style.cssText = "background: rgba(0,0,0,0.4); border-radius: 8px; padding: 12px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);";
+                let html = `<div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px dotted #555; padding-bottom:5px;">
+                    <b style="color:var(--primary-color)">${list.title}</b> <button class="danger small" onclick="deleteList(${list.id})">Del List</button></div>`;
+
+                if(list.type === 'name' || list.type === 'check') {
+                    list.items.forEach(item => {
+                        let decor = item.checked ? 'text-decoration:line-through; color:#888;' : '';
+                        html += `<div class="q-item">
+                            <div style="flex-grow:1; display:flex; align-items:center;">
+                                ${list.type === 'check' ? `<input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleCheck(${list.id}, ${item.id})">` : ''}
+                                <span style="${decor}">${item.text}</span>
+                            </div>
+                            <button class="danger delete-btn" onclick="removeListItem(${list.id}, ${item.id})">Delete</button>
+                        </div>`;
+                    });
+                    html += `<div style="display:flex; gap:5px; margin-top:10px;"><input type="text" id="input-${list.id}" placeholder="Add item..." style="margin:0;"><button onclick="addListItem(${list.id})">+</button></div>`;
+                } 
+                else if (list.type === 'account') {
+                    let total = 0;
+                    list.items.forEach(item => {
+                        total += item.amount; let c = item.amount >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+                        html += `<div class="q-item"><span>${item.text}</span>
+                            <div style="display:flex; align-items:center;">
+                                <b style="color:${c}; margin-right:10px;">${item.amount > 0 ? '+' : ''}${item.amount.toFixed(2)}</b>
+                                <button class="danger delete-btn" onclick="removeListItem(${list.id}, ${item.id})">Del</button>
+                            </div></div>`;
+                    });
+                    let tc = total >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+                    html += `<div style="display:flex; justify-content:space-between; font-weight:bold; padding-top:10px; border-top:2px solid #555; font-size:1.1rem;">
+                        <span>Balance:</span><span style="color:${tc}">${total > 0 ? '+' : ''}${total.toFixed(2)}</span></div>
+                        <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;">
+                            <input type="text" id="acc-name-${list.id}" placeholder="Entry Name" style="flex: 2; margin:0; min-width:100px;">
+                            <input type="number" id="acc-amt-${list.id}" placeholder="Amount" style="flex: 1; margin:0; min-width:70px;">
+                            <button class="success" onclick="addAccountItem(${list.id}, 'income')">+</button>
+                            <button class="danger" onclick="addAccountItem(${list.id}, 'expense')">-</button>
+                        </div>`;
+                }
+                card.innerHTML = html; c.appendChild(card);
+            });
+        }
+
+        // Init
+        renderWebsites(); renderContacts(); renderApps(); renderAlarms(); renderQuickLists();
+    </script>
+
+</body></html>
